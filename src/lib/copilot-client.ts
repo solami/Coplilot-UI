@@ -1,104 +1,48 @@
 /**
- * Copilot SDK Client Manager
+ * Copilot SDK Client - Real connection to GitHub Copilot CLI
  *
- * This module manages the connection to GitHub Copilot CLI via @github/copilot-sdk.
- * In production, it creates a singleton CopilotClient that communicates with
- * the locally installed Copilot CLI via JSON-RPC.
- *
- * When Copilot CLI is not available, it falls back to mock mode.
+ * Uses @github/copilot-sdk to communicate with the locally installed
+ * Copilot CLI via JSON-RPC.
  */
 
-export interface CopilotSession {
-  id: string;
-  model: string;
-  isConnected: boolean;
-}
+import { CopilotClient, approveAll } from "@github/copilot-sdk";
 
-export interface StreamEvent {
-  type: "delta" | "tool_call" | "complete" | "error";
-  content?: string;
-  toolCall?: {
-    name: string;
-    input: string;
-    status: "running" | "completed" | "error";
-    output?: string;
-  };
-  error?: string;
-}
+// Singleton client
+let client: InstanceType<typeof CopilotClient> | null = null;
+let clientStarted = false;
+let clientError: string | null = null;
 
-// Check if Copilot CLI/SDK is available
-let isCopilotAvailable = false;
+export async function getClient(): Promise<InstanceType<typeof CopilotClient>> {
+  if (client && clientStarted) return client;
 
-async function checkCopilotAvailability(): Promise<boolean> {
   try {
-    // Try to dynamically import the SDK
-    // In production, @github/copilot-sdk would be installed
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = "@github/copilot-sdk";
-    await import(/* webpackIgnore: true */ mod);
-    return true;
-  } catch {
-    return false;
+    client = new CopilotClient();
+    await client.start();
+    clientStarted = true;
+    clientError = null;
+    return client;
+  } catch (err) {
+    clientError = String(err);
+    throw new Error(`Copilot CLI connection failed: ${err}`);
   }
 }
 
-// Initialize on module load
-checkCopilotAvailability().then((available) => {
-  isCopilotAvailable = available;
-});
+export interface SessionHandle {
+  session: Awaited<ReturnType<InstanceType<typeof CopilotClient>["createSession"]>>;
+}
 
-export function getCopilotStatus(): {
-  available: boolean;
-  mode: "live" | "mock";
-} {
+export async function createSession(model = "gpt-5"): Promise<SessionHandle> {
+  const cl = await getClient();
+  const session = await cl.createSession({
+    model,
+    onPermissionRequest: approveAll,
+  });
+  return { session };
+}
+
+export function getStatus(): { available: boolean; error: string | null } {
   return {
-    available: isCopilotAvailable,
-    mode: isCopilotAvailable ? "live" : "mock",
+    available: clientStarted && !clientError,
+    error: clientError,
   };
-}
-
-/**
- * Mock streaming response generator for demo mode.
- * Simulates the behavior of real Copilot CLI responses.
- */
-export async function* mockStreamResponse(
-  prompt: string
-): AsyncGenerator<StreamEvent> {
-  // Simulate thinking delay
-  await new Promise((r) => setTimeout(r, 500));
-
-  // Emit a tool call
-  yield {
-    type: "tool_call",
-    toolCall: {
-      name: "read_file",
-      input: "src/app/page.tsx",
-      status: "running",
-    },
-  };
-
-  await new Promise((r) => setTimeout(r, 800));
-
-  yield {
-    type: "tool_call",
-    toolCall: {
-      name: "read_file",
-      input: "src/app/page.tsx",
-      status: "completed",
-      output: "Read 45 lines",
-    },
-  };
-
-  // Stream text response
-  const response = `I've analyzed your request regarding "${prompt}". Here's my approach:\n\n1. First, I'll review the current implementation\n2. Then apply the necessary changes\n3. Finally, verify everything works correctly\n\nLet me proceed with the implementation.`;
-
-  for (let i = 0; i < response.length; i += 3) {
-    yield {
-      type: "delta",
-      content: response.slice(i, i + 3),
-    };
-    await new Promise((r) => setTimeout(r, 15));
-  }
-
-  yield { type: "complete" };
 }

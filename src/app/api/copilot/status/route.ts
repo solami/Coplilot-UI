@@ -1,21 +1,18 @@
 import { NextResponse } from "next/server";
-import { getCopilotStatus } from "@/lib/copilot-client";
+import { getStatus } from "@/lib/copilot-client";
 
-// GET /api/copilot/status - Check Copilot CLI connection status
 export async function GET() {
-  const status = getCopilotStatus();
-
+  const status = getStatus();
   return NextResponse.json({
     ...status,
     timestamp: new Date().toISOString(),
     setupGuide: !status.available
       ? {
-          message: "Copilot CLI is not detected. To enable full functionality:",
+          message: "Copilot CLIが検出されません。以下の手順でセットアップしてください：",
           steps: [
-            "Install Copilot CLI: npm install -g @github/copilot-cli",
-            "Authenticate: copilot auth login",
-            "Install the SDK: npm install @github/copilot-sdk",
-            "Set GITHUB_TOKEN in your .env.local file",
+            "npm install -g @github/copilot-cli",
+            "copilot auth login",
+            "アプリを再起動",
           ],
         }
       : undefined,

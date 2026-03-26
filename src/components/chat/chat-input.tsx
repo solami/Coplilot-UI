@@ -30,9 +30,7 @@ export function ChatInput({
     if (!value.trim()) return;
     onSend(value.trim());
     setValue("");
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
   }, [value, onSend]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -44,20 +42,18 @@ export function ChatInput({
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setValue(e.target.value);
-    const textarea = e.target;
-    textarea.style.height = "auto";
-    textarea.style.height = Math.min(textarea.scrollHeight, 160) + "px";
+    const ta = e.target;
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
   };
 
-  const currentModel = models.find((m) => m.id === selectedModel) || models[0];
-  const currentReasoning = reasoningLevels.find((r) => r.id === selectedReasoning) || reasoningLevels[1];
+  const curModel = models.find((m) => m.id === selectedModel) || models[0];
+  const curReasoning = reasoningLevels.find((r) => r.id === selectedReasoning) || reasoningLevels[1];
 
   return (
     <div className="px-6 pb-4 pt-2">
       <div className="max-w-3xl mx-auto">
-        {/* Input container */}
-        <div className="rounded-2xl border border-[var(--color-border-default)] bg-white shadow-sm">
-          {/* Textarea */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
           <textarea
             ref={textareaRef}
             value={value}
@@ -65,63 +61,49 @@ export function ChatInput({
             onKeyDown={handleKeyDown}
             placeholder={placeholder || "Codex に質問してみましょう。ファイルを追加するには @、コマンドには / を使用します"}
             rows={1}
-            className="w-full bg-transparent text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] px-4 pt-3.5 pb-2 resize-none outline-none min-h-[44px] max-h-[160px]"
+            className="w-full bg-transparent text-sm text-gray-900 placeholder-gray-400 px-4 pt-3.5 pb-2 resize-none outline-none"
+            style={{ minHeight: 44, maxHeight: 160 }}
           />
-
-          {/* Bottom bar */}
           <div className="flex items-center justify-between px-3 pb-2.5">
             <div className="flex items-center gap-1">
-              {/* Plus button */}
-              <button className="p-1.5 rounded-md hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] transition-colors">
+              <button className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500">
                 <Plus size={18} />
               </button>
 
-              {/* Model selector */}
+              {/* Model */}
               <div className="relative">
                 <button
                   onClick={() => { setShowModels(!showModels); setShowReasoning(false); }}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-sm text-gray-500 hover:bg-gray-100"
                 >
-                  {currentModel.name}
-                  <ChevronDown size={12} />
+                  {curModel.name} <ChevronDown size={12} />
                 </button>
                 {showModels && (
-                  <div className="absolute bottom-full left-0 mb-2 w-48 bg-white border border-[var(--color-border-default)] rounded-xl shadow-lg z-50 overflow-hidden">
-                    {models.map((model) => (
-                      <button
-                        key={model.id}
-                        onClick={() => { onModelChange(model.id); setShowModels(false); }}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[var(--color-bg-hover)] transition-colors ${
-                          model.id === selectedModel ? "text-[var(--color-accent-blue)] font-medium" : "text-[var(--color-text-primary)]"
-                        }`}
-                      >
-                        {model.name}
+                  <div className="absolute bottom-full left-0 mb-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                    {models.map((m) => (
+                      <button key={m.id} onClick={() => { onModelChange(m.id); setShowModels(false); }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${m.id === selectedModel ? "text-blue-600 font-medium" : "text-gray-900"}`}>
+                        {m.name}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Reasoning level */}
+              {/* Reasoning */}
               <div className="relative">
                 <button
                   onClick={() => { setShowReasoning(!showReasoning); setShowModels(false); }}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-sm text-gray-500 hover:bg-gray-100"
                 >
-                  {currentReasoning.name}
-                  <ChevronDown size={12} />
+                  {curReasoning.name} <ChevronDown size={12} />
                 </button>
                 {showReasoning && (
-                  <div className="absolute bottom-full left-0 mb-2 w-32 bg-white border border-[var(--color-border-default)] rounded-xl shadow-lg z-50 overflow-hidden">
-                    {reasoningLevels.map((level) => (
-                      <button
-                        key={level.id}
-                        onClick={() => { onReasoningChange(level.id); setShowReasoning(false); }}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[var(--color-bg-hover)] transition-colors ${
-                          level.id === selectedReasoning ? "text-[var(--color-accent-blue)] font-medium" : "text-[var(--color-text-primary)]"
-                        }`}
-                      >
-                        {level.name}
+                  <div className="absolute bottom-full left-0 mb-2 w-32 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                    {reasoningLevels.map((l) => (
+                      <button key={l.id} onClick={() => { onReasoningChange(l.id); setShowReasoning(false); }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${l.id === selectedReasoning ? "text-blue-600 font-medium" : "text-gray-900"}`}>
+                        {l.name}
                       </button>
                     ))}
                   </div>
@@ -130,20 +112,17 @@ export function ChatInput({
             </div>
 
             <div className="flex items-center gap-1">
-              {/* Mic button */}
-              <button className="p-1.5 rounded-md hover:bg-[var(--color-bg-hover)] text-[var(--color-text-tertiary)] transition-colors">
+              <button className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400">
                 <Mic size={18} />
               </button>
-
-              {/* Send button */}
               <button
                 onClick={handleSubmit}
                 disabled={!value.trim()}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                  value.trim()
-                    ? "bg-[var(--color-text-primary)] text-white"
-                    : "bg-[var(--color-bg-hover)] text-[var(--color-text-tertiary)]"
-                }`}
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                style={{
+                  background: value.trim() ? "#1a1a1a" : "#e5e5ea",
+                  color: value.trim() ? "#fff" : "#aeaeb2",
+                }}
               >
                 <ArrowUp size={18} />
               </button>
