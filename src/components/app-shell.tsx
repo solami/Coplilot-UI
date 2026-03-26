@@ -31,10 +31,7 @@ export function AppShell() {
   const handleSelectThread = useCallback((threadId: string) => {
     setActiveThreadId(threadId);
     for (const p of projects) {
-      if (p.threads.some((t) => t.id === threadId)) {
-        setActiveProjectId(p.id);
-        break;
-      }
+      if (p.threads.some((t) => t.id === threadId)) { setActiveProjectId(p.id); break; }
     }
   }, [projects]);
 
@@ -43,13 +40,7 @@ export function AppShell() {
     setProjects((prev) =>
       prev.map((p) =>
         p.id === activeProjectId
-          ? {
-              ...p,
-              threads: [
-                { id, title: "新しいスレッド", status: "idle" as const, model: selectedModel, projectId: activeProjectId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), messages: [] },
-                ...p.threads,
-              ],
-            }
+          ? { ...p, threads: [{ id, title: "新しいスレッド", status: "idle" as const, model: selectedModel, projectId: activeProjectId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), messages: [] }, ...p.threads] }
           : p
       )
     );
@@ -58,30 +49,17 @@ export function AppShell() {
 
   const handleSend = useCallback(
     async (content: string) => {
-      // Abort any previous stream
       abortRef.current?.abort();
       const abort = new AbortController();
       abortRef.current = abort;
 
       let tid = activeThreadId;
-
-      // Create thread if needed (with user message already included)
       const userMsg: Message = { id: generateId(), role: "user", content, timestamp: new Date().toISOString() };
 
       if (!tid) {
         tid = generateId();
-        const newThread: Thread = {
-          id: tid,
-          title: content.slice(0, 40) + (content.length > 40 ? "..." : ""),
-          status: "running",
-          model: selectedModel,
-          projectId: activeProjectId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          messages: [userMsg],
-        };
         setProjects((prev) =>
-          prev.map((p) => (p.id === activeProjectId ? { ...p, threads: [newThread, ...p.threads] } : p))
+          prev.map((p) => (p.id === activeProjectId ? { ...p, threads: [{ id: tid!, title: content.slice(0, 40) + (content.length > 40 ? "..." : ""), status: "running" as const, model: selectedModel, projectId: activeProjectId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), messages: [userMsg] }, ...p.threads] } : p))
         );
         setActiveThreadId(tid);
       } else {
@@ -90,95 +68,49 @@ export function AppShell() {
 
       const threadId = tid;
       setAgentStatus("Thinking...");
-
-      // Create assistant message placeholder
       const assistantId = generateId();
-      const assistantMsg: Message = { id: assistantId, role: "assistant", content: "", timestamp: new Date().toISOString(), isStreaming: true, toolCalls: [] };
-      updateThread(threadId, (t) => ({ ...t, messages: [...t.messages, assistantMsg] }));
+      updateThread(threadId, (t) => ({ ...t, messages: [...t.messages, { id: assistantId, role: "assistant" as const, content: "", timestamp: new Date().toISOString(), isStreaming: true, toolCalls: [] }] }));
 
-      // Stream from API
       try {
-        const res = await fetch("/api/copilot/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: content, model: selectedModel }),
-          signal: abort.signal,
-        });
-
+        const res = await fetch("/api/copilot/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: content, model: selectedModel }), signal: abort.signal });
         const reader = res.body?.getReader();
         if (!reader) throw new Error("No reader");
-
         const decoder = new TextDecoder();
         let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
-
           for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
             try {
               const event = JSON.parse(line.slice(6));
-
               if (event.type === "delta") {
-                updateThread(threadId, (t) => ({
-                  ...t,
-                  messages: t.messages.map((m) =>
-                    m.id === assistantId ? { ...m, content: m.content + event.content } : m
-                  ),
-                }));
+                updateThread(threadId, (t) => ({ ...t, messages: t.messages.map((m) => m.id === assistantId ? { ...m, content: m.content + event.content } : m) }));
                 setAgentStatus("Writing...");
               } else if (event.type === "tool_call") {
                 setAgentStatus(event.toolCall.status === "running" ? "Executing..." : "Writing...");
-                updateThread(threadId, (t) => ({
-                  ...t,
-                  messages: t.messages.map((m) => {
-                    if (m.id !== assistantId) return m;
-                    const tc = {
-                      id: generateId(),
-                      name: event.toolCall.name,
-                      status: event.toolCall.status,
-                      input: event.toolCall.input,
-                      output: event.toolCall.output,
-                      duration: event.toolCall.duration,
-                    };
-                    // Update existing or add new
-                    const existing = m.toolCalls?.find((t) => t.name === event.toolCall.name && t.status === "running");
-                    if (existing && event.toolCall.status !== "running") {
-                      return { ...m, toolCalls: m.toolCalls?.map((t) => (t.id === existing.id ? { ...t, ...event.toolCall } : t)) };
-                    }
-                    return { ...m, toolCalls: [...(m.toolCalls || []), tc] };
-                  }),
-                }));
+                updateThread(threadId, (t) => ({ ...t, messages: t.messages.map((m) => {
+                  if (m.id !== assistantId) return m;
+                  const existing = m.toolCalls?.find((tc) => tc.name === event.toolCall.name && tc.status === "running");
+                  if (existing && event.toolCall.status !== "running") {
+                    return { ...m, toolCalls: m.toolCalls?.map((tc) => (tc.id === existing.id ? { ...tc, ...event.toolCall } : tc)) };
+                  }
+                  return { ...m, toolCalls: [...(m.toolCalls || []), { id: generateId(), name: event.toolCall.name, status: event.toolCall.status, input: event.toolCall.input, output: event.toolCall.output, duration: event.toolCall.duration }] };
+                }) }));
               } else if (event.type === "done" || event.type === "complete") {
-                updateThread(threadId, (t) => ({
-                  ...t,
-                  status: "completed",
-                  messages: t.messages.map((m) => (m.id === assistantId ? { ...m, isStreaming: false } : m)),
-                }));
+                updateThread(threadId, (t) => ({ ...t, status: "completed", messages: t.messages.map((m) => (m.id === assistantId ? { ...m, isStreaming: false } : m)) }));
                 setAgentStatus("Idle");
-              } else if (event.type === "error") {
-                console.warn("Copilot error:", event.error);
               }
-            } catch {
-              // Skip malformed JSON
-            }
+            } catch { /* skip */ }
           }
         }
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
-          console.error("Stream error:", err);
-          updateThread(threadId, (t) => ({
-            ...t,
-            status: "error",
-            messages: t.messages.map((m) =>
-              m.id === assistantId ? { ...m, content: m.content || "エラーが発生しました。", isStreaming: false } : m
-            ),
-          }));
+          updateThread(threadId, (t) => ({ ...t, status: "error", messages: t.messages.map((m) => m.id === assistantId ? { ...m, content: m.content || "エラーが発生しました。", isStreaming: false } : m) }));
         }
         setAgentStatus("Idle");
       }
@@ -187,28 +119,12 @@ export function AppShell() {
   );
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center p-1" style={{ background: "#e8e8e8" }}>
-      <div className="w-full h-full max-w-[1800px] rounded-xl border border-gray-300 shadow-xl overflow-hidden flex flex-col bg-white">
+    <div className="h-screen w-screen flex items-center justify-center p-1" style={{ background: "#dedede" }}>
+      <div className="w-full h-full rounded-xl overflow-hidden flex flex-col bg-white" style={{ boxShadow: "0 25px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)" }}>
         <TitleBar threadTitle={activeThread?.title || "新しいスレッド"} agentStatus={agentStatus} />
         <div className="flex-1 flex min-h-0">
-          <Sidebar
-            projects={projects}
-            activeThreadId={activeThreadId}
-            onSelectThread={handleSelectThread}
-            onNewThread={handleNewThread}
-            onSettings={() => {}}
-          />
-          <ChatPanel
-            messages={messages}
-            selectedModel={selectedModel}
-            selectedReasoning={selectedReasoning}
-            activeProjectName={activeProject.name}
-            projects={projects}
-            onSend={handleSend}
-            onModelChange={setSelectedModel}
-            onReasoningChange={setSelectedReasoning}
-            onSelectProject={(id) => { setActiveProjectId(id); setActiveThreadId(null); }}
-          />
+          <Sidebar projects={projects} activeThreadId={activeThreadId} onSelectThread={handleSelectThread} onNewThread={handleNewThread} onSettings={() => {}} />
+          <ChatPanel messages={messages} selectedModel={selectedModel} selectedReasoning={selectedReasoning} activeProjectName={activeProject.name} projects={projects} onSend={handleSend} onModelChange={setSelectedModel} onReasoningChange={setSelectedReasoning} onSelectProject={(id) => { setActiveProjectId(id); setActiveThreadId(null); }} />
         </div>
         <StatusBar environment="ローカル環境" permissions="デフォルト権限" branch="main" />
       </div>

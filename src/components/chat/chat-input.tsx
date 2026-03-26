@@ -10,7 +10,6 @@ interface ChatInputProps {
   selectedReasoning: string;
   onModelChange: (model: string) => void;
   onReasoningChange: (level: string) => void;
-  placeholder?: string;
 }
 
 export function ChatInput({
@@ -19,7 +18,6 @@ export function ChatInput({
   selectedReasoning,
   onModelChange,
   onReasoningChange,
-  placeholder,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [showModels, setShowModels] = useState(false);
@@ -44,45 +42,52 @@ export function ChatInput({
     setValue(e.target.value);
     const ta = e.target;
     ta.style.height = "auto";
-    ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
+    ta.style.height = Math.min(ta.scrollHeight, 180) + "px";
   };
 
   const curModel = models.find((m) => m.id === selectedModel) || models[0];
   const curReasoning = reasoningLevels.find((r) => r.id === selectedReasoning) || reasoningLevels[1];
 
   return (
-    <div className="px-6 pb-4 pt-2">
-      <div className="max-w-3xl mx-auto">
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div className="px-8 pb-5 pt-3">
+      <div className="max-w-[780px] mx-auto">
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+          {/* Textarea */}
           <textarea
             ref={textareaRef}
             value={value}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder || "Codex に質問してみましょう。ファイルを追加するには @、コマンドには / を使用します"}
+            placeholder="Codex に質問してみましょう。ファイルを追加するには @、コマンドには / を使用します"
             rows={1}
-            className="w-full bg-transparent text-sm text-gray-900 placeholder-gray-400 px-4 pt-3.5 pb-2 resize-none outline-none"
-            style={{ minHeight: 44, maxHeight: 160 }}
+            className="w-full bg-transparent text-[15px] text-gray-900 placeholder-gray-400 px-5 pt-4 pb-2 resize-none outline-none leading-relaxed"
+            style={{ minHeight: 52, maxHeight: 180 }}
           />
-          <div className="flex items-center justify-between px-3 pb-2.5">
-            <div className="flex items-center gap-1">
-              <button className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500">
-                <Plus size={18} />
+
+          {/* Bottom bar */}
+          <div className="flex items-center justify-between px-4 pb-3">
+            <div className="flex items-center gap-0.5">
+              {/* Plus */}
+              <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+                <Plus size={20} />
               </button>
 
-              {/* Model */}
+              {/* Model selector */}
               <div className="relative">
                 <button
                   onClick={() => { setShowModels(!showModels); setShowReasoning(false); }}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-sm text-gray-500 hover:bg-gray-100"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[14px] text-gray-500 hover:bg-gray-100 transition-colors"
                 >
-                  {curModel.name} <ChevronDown size={12} />
+                  {curModel.name}
+                  <ChevronDown size={14} className="text-gray-400" />
                 </button>
                 {showModels && (
-                  <div className="absolute bottom-full left-0 mb-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                  <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 py-1.5">
                     {models.map((m) => (
                       <button key={m.id} onClick={() => { onModelChange(m.id); setShowModels(false); }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${m.id === selectedModel ? "text-blue-600 font-medium" : "text-gray-900"}`}>
+                        className={`w-full text-left px-5 py-2.5 text-[14px] hover:bg-gray-50 transition-colors ${
+                          m.id === selectedModel ? "text-blue-600 font-medium" : "text-gray-800"
+                        }`}>
                         {m.name}
                       </button>
                     ))}
@@ -90,19 +95,22 @@ export function ChatInput({
                 )}
               </div>
 
-              {/* Reasoning */}
+              {/* Reasoning level */}
               <div className="relative">
                 <button
                   onClick={() => { setShowReasoning(!showReasoning); setShowModels(false); }}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-sm text-gray-500 hover:bg-gray-100"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[14px] text-gray-500 hover:bg-gray-100 transition-colors"
                 >
-                  {curReasoning.name} <ChevronDown size={12} />
+                  {curReasoning.name}
+                  <ChevronDown size={14} className="text-gray-400" />
                 </button>
                 {showReasoning && (
-                  <div className="absolute bottom-full left-0 mb-2 w-32 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                  <div className="absolute bottom-full left-0 mb-2 w-36 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 py-1.5">
                     {reasoningLevels.map((l) => (
                       <button key={l.id} onClick={() => { onReasoningChange(l.id); setShowReasoning(false); }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${l.id === selectedReasoning ? "text-blue-600 font-medium" : "text-gray-900"}`}>
+                        className={`w-full text-left px-5 py-2.5 text-[14px] hover:bg-gray-50 transition-colors ${
+                          l.id === selectedReasoning ? "text-blue-600 font-medium" : "text-gray-800"
+                        }`}>
                         {l.name}
                       </button>
                     ))}
@@ -111,20 +119,23 @@ export function ChatInput({
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
-              <button className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400">
-                <Mic size={18} />
+            <div className="flex items-center gap-1.5">
+              {/* Mic */}
+              <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-300 transition-colors">
+                <Mic size={20} />
               </button>
+
+              {/* Send */}
               <button
                 onClick={handleSubmit}
                 disabled={!value.trim()}
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all"
                 style={{
                   background: value.trim() ? "#1a1a1a" : "#e5e5ea",
                   color: value.trim() ? "#fff" : "#aeaeb2",
                 }}
               >
-                <ArrowUp size={18} />
+                <ArrowUp size={20} strokeWidth={2.5} />
               </button>
             </div>
           </div>

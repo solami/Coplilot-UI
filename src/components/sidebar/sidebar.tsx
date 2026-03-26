@@ -1,6 +1,6 @@
 "use client";
 
-import { SquarePen, Clock, Grid2x2, Settings, FolderClosed } from "lucide-react";
+import { SquarePen, Clock, Grid2x2, Settings, FolderClosed, ArrowRightLeft, ListFilter } from "lucide-react";
 import { Project } from "@/types";
 
 interface SidebarProps {
@@ -32,61 +32,65 @@ export function Sidebar({
   onSettings,
 }: SidebarProps) {
   return (
-    <div
-      style={{ width: 340, minWidth: 340 }}
-      className="h-full border-r border-gray-200 bg-gray-50 flex flex-col shrink-0 select-none"
-    >
-      {/* Top actions */}
-      <div className="px-4 pt-12 pb-2 space-y-0.5">
+    <div className="h-full border-r border-gray-200/80 bg-[#f9f9f9] flex flex-col shrink-0 select-none" style={{ width: 350, minWidth: 350 }}>
+
+      {/* Top nav actions */}
+      <div className="px-5 pt-14 pb-3 space-y-1">
         <button
           onClick={onNewThread}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-900 hover:bg-gray-200/70 transition-colors"
+          className="w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-[15px] text-gray-800 hover:bg-black/[0.04] active:bg-black/[0.07] transition-colors"
         >
-          <SquarePen size={16} className="text-gray-500" />
+          <SquarePen size={18} className="text-gray-400" />
           新しいスレッド
         </button>
-        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-900 hover:bg-gray-200/70 transition-colors">
-          <Clock size={16} className="text-gray-500" />
+        <button className="w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-[15px] text-gray-800 hover:bg-black/[0.04] active:bg-black/[0.07] transition-colors">
+          <Clock size={18} className="text-gray-400" />
           オートメーション
         </button>
-        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-900 hover:bg-gray-200/70 transition-colors">
-          <Grid2x2 size={16} className="text-gray-500" />
+        <button className="w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-[15px] text-gray-800 hover:bg-black/[0.04] active:bg-black/[0.07] transition-colors">
+          <Grid2x2 size={18} className="text-gray-400" />
           スキル
         </button>
       </div>
 
       {/* Threads header */}
-      <div className="flex items-center justify-between px-6 pt-4 pb-1">
-        <span className="text-xs text-gray-400 font-medium">スレッド</span>
-        <div className="flex items-center gap-1">
-          <button className="p-1 rounded hover:bg-gray-200/70 text-gray-400">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 6h8M4 10h8"/></svg>
+      <div className="flex items-center justify-between px-7 pt-5 pb-2">
+        <span className="text-[13px] text-gray-400 font-medium tracking-wide">スレッド</span>
+        <div className="flex items-center gap-0.5">
+          <button className="p-1.5 rounded-lg hover:bg-black/[0.04] text-gray-400 transition-colors">
+            <ArrowRightLeft size={15} />
           </button>
-          <button className="p-1 rounded hover:bg-gray-200/70 text-gray-400">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+          <button className="p-1.5 rounded-lg hover:bg-black/[0.04] text-gray-400 transition-colors">
+            <ListFilter size={15} />
           </button>
         </div>
       </div>
 
-      {/* Thread list */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3">
+      {/* Thread list by project */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         {projects.map((project) => (
-          <div key={project.id} className="mb-1">
-            <div className="flex items-center gap-2 px-3 py-2">
-              <FolderClosed size={14} className="text-gray-500" />
-              <span className="text-sm text-gray-900 font-medium">{project.name}</span>
+          <div key={project.id} className="mb-2">
+            {/* Project folder */}
+            <div className="flex items-center gap-2.5 px-3 py-2">
+              <FolderClosed size={16} className="text-gray-400 shrink-0" />
+              <span className="text-[15px] text-gray-800 font-medium">{project.name}</span>
             </div>
+
+            {/* Threads under project */}
             {project.threads.map((thread) => (
               <button
                 key={thread.id}
                 onClick={() => onSelectThread(thread.id)}
-                className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 ml-5 rounded-lg text-left transition-colors ${
-                  activeThreadId === thread.id ? "bg-gray-200" : "hover:bg-gray-100"
+                className={`w-full flex items-center justify-between gap-3 pl-10 pr-3 py-2 rounded-xl text-left transition-colors ${
+                  activeThreadId === thread.id
+                    ? "bg-black/[0.06]"
+                    : "hover:bg-black/[0.03]"
                 }`}
-                style={{ maxWidth: "calc(100% - 20px)" }}
               >
-                <span className="text-sm text-gray-900 truncate">{thread.title}</span>
-                <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">
+                <span className="text-[14px] text-gray-700 truncate leading-snug">
+                  {thread.title}
+                </span>
+                <span className="text-[13px] text-gray-400 whitespace-nowrap shrink-0 tabular-nums">
                   {relTime(thread.updatedAt)}
                 </span>
               </button>
@@ -95,13 +99,13 @@ export function Sidebar({
         ))}
       </div>
 
-      {/* Settings */}
-      <div className="border-t border-gray-200 px-4 py-2">
+      {/* Bottom: Settings */}
+      <div className="border-t border-gray-200/80 px-5 py-3">
         <button
           onClick={onSettings}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-900 hover:bg-gray-200/70 transition-colors"
+          className="w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-[15px] text-gray-800 hover:bg-black/[0.04] active:bg-black/[0.07] transition-colors"
         >
-          <Settings size={16} className="text-gray-500" />
+          <Settings size={18} className="text-gray-400" />
           設定
         </button>
       </div>
