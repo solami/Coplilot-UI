@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { TitleBar } from "./title-bar";
 import { Sidebar } from "./sidebar/sidebar";
 import { ChatPanel } from "./chat/chat-panel";
@@ -15,18 +15,18 @@ export function AppShell() {
   const [activeProjectId, setActiveProjectId] = useState("cmux");
   const [selectedModel, setSelectedModel] = useState("custom");
   const [selectedReasoning, setSelectedReasoning] = useState("medium");
+  const [agentStatus, setAgentStatus] = useState("Idle");
+  const streamTimers = useRef<ReturnType<typeof setInterval>[]>([]);
 
   // Find active thread across all projects
   const activeThread = projects
     .flatMap((p) => p.threads)
     .find((t) => t.id === activeThreadId);
   const messages = activeThread?.messages || [];
-
   const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
 
   const handleSelectThread = useCallback((threadId: string) => {
     setActiveThreadId(threadId);
-    // Also set the project for this thread
     for (const p of projects) {
       if (p.threads.some((t) => t.id === threadId)) {
         setActiveProjectId(p.id);
@@ -36,8 +36,9 @@ export function AppShell() {
   }, [projects]);
 
   const handleNewThread = useCallback(() => {
+    const id = generateId();
     const newThread: Thread = {
-      id: generateId(),
+      id,
       title: "新しいスレッド",
       status: "idle",
       model: selectedModel,
@@ -53,17 +54,32 @@ export function AppShell() {
           : p
       )
     );
-    setActiveThreadId(newThread.id);
+    setActiveThreadId(id);
   }, [selectedModel, activeProjectId]);
+
+  // Helper: update a thread's messages using functional state update
+  const updateThread = useCallback((threadId: string, updater: (t: Thread) => Thread) => {
+    setProjects((prev) =>
+      prev.map((p) => ({
+        ...p,
+        threads: p.threads.map((t) => (t.id === threadId ? updater(t) : t)),
+      }))
+    );
+  }, []);
 
   const handleSend = useCallback(
     (content: string) => {
-      let threadId = activeThreadId;
+      // Clear any previous stream timers
+      streamTimers.current.forEach(clearInterval);
+      streamTimers.current = [];
 
-      // If no active thread, create one
-      if (!threadId) {
+      // Determine thread - create if needed
+      let targetThreadId = activeThreadId;
+
+      if (!targetThreadId) {
+        targetThreadId = generateId();
         const newThread: Thread = {
-          id: generateId(),
+          id: targetThreadId,
           title: content.slice(0, 40) + (content.length > 40 ? "..." : ""),
           status: "running",
           model: selectedModel,
@@ -72,7 +88,15 @@ export function AppShell() {
           updatedAt: new Date().toISOString(),
           messages: [],
         };
-        threadId = newThread.id;
+        // Create thread with the user message already included
+        const userMessage: Message = {
+          id: generateId(),
+          role: "user",
+          content,
+          timestamp: new Date().toISOString(),
+        };
+        newThread.messages = [userMessage];
+
         setProjects((prev) =>
           prev.map((p) =>
             p.id === activeProjectId
@@ -80,54 +104,32 @@ export function AppShell() {
               : p
           )
         );
-        setActiveThreadId(threadId);
+        setActiveThreadId(targetThreadId);
+      } else {
+        // Add user message to existing thread
+        const userMessage: Message = {
+          id: generateId(),
+          role: "user",
+          content,
+          timestamp: new Date().toISOString(),
+        };
+        updateThread(targetThreadId, (t) => ({
+          ...t,
+          messages: [...t.messages, userMessage],
+          updatedAt: new Date().toISOString(),
+          status: "running",
+        }));
       }
 
-      const finalThreadId = threadId;
+      const tid = targetThreadId;
+      setAgentStatus("Thinking...");
 
-      // Add user message
-      const userMessage: Message = {
-        id: generateId(),
-        role: "user",
-        content,
-        timestamp: new Date().toISOString(),
-      };
-
-      const addMessageToThread = (msg: Message) => {
-        setProjects((prev) =>
-          prev.map((p) => ({
-            ...p,
-            threads: p.threads.map((t) =>
-              t.id === finalThreadId
-                ? { ...t, messages: [...t.messages, msg], updatedAt: new Date().toISOString() }
-                : t
-            ),
-          }))
-        );
-      };
-
-      const updateLastMessage = (updater: (m: Message) => Message) => {
-        setProjects((prev) =>
-          prev.map((p) => ({
-            ...p,
-            threads: p.threads.map((t) => {
-              if (t.id !== finalThreadId) return t;
-              const msgs = [...t.messages];
-              if (msgs.length > 0) {
-                msgs[msgs.length - 1] = updater(msgs[msgs.length - 1]);
-              }
-              return { ...t, messages: msgs };
-            }),
-          }))
-        );
-      };
-
-      addMessageToThread(userMessage);
-
-      // Simulate assistant response
+      // Phase 1: Add assistant message with tool call (after short delay)
+      const assistantMsgId = generateId();
       setTimeout(() => {
+        setAgentStatus("Reading...");
         const assistantMessage: Message = {
-          id: generateId(),
+          id: assistantMsgId,
           role: "assistant",
           content: "",
           timestamp: new Date().toISOString(),
@@ -141,22 +143,32 @@ export function AppShell() {
             },
           ],
         };
+        updateThread(tid, (t) => ({
+          ...t,
+          messages: [...t.messages, assistantMessage],
+        }));
 
-        addMessageToThread(assistantMessage);
-
-        // Tool completion
+        // Phase 2: Complete tool call
         setTimeout(() => {
-          updateLastMessage((m) => ({
-            ...m,
-            toolCalls: m.toolCalls?.map((tc) => ({
-              ...tc,
-              status: "completed" as const,
-              output: "Read 45 lines from src/app/page.tsx",
-              duration: 120,
-            })),
+          setAgentStatus("Writing...");
+          updateThread(tid, (t) => ({
+            ...t,
+            messages: t.messages.map((m) =>
+              m.id === assistantMsgId
+                ? {
+                    ...m,
+                    toolCalls: m.toolCalls?.map((tc) => ({
+                      ...tc,
+                      status: "completed" as const,
+                      output: "Read 45 lines from src/app/page.tsx",
+                      duration: 120,
+                    })),
+                  }
+                : m
+            ),
           }));
 
-          // Stream text
+          // Phase 3: Stream text response
           const responseText = `ご質問を確認しました。以下の手順で対応します：
 
 1. **プロジェクト構造の確認** - 現在のファイル構成を分析します
@@ -177,25 +189,37 @@ export function processRequest(input: string): Result {
 変更を適用しました。テストも全て通過しています。`;
 
           let charIndex = 0;
-          const streamInterval = setInterval(() => {
+          const interval = setInterval(() => {
             charIndex += 4;
-            if (charIndex >= responseText.length) {
+            const done = charIndex >= responseText.length;
+            if (done) {
               charIndex = responseText.length;
-              clearInterval(streamInterval);
+              clearInterval(interval);
+              setAgentStatus("Idle");
+              updateThread(tid, (t) => ({
+                ...t,
+                status: "completed",
+              }));
             }
-            const currentContent = responseText.substring(0, charIndex);
-            const stillStreaming = charIndex < responseText.length;
 
-            updateLastMessage((m) => ({
-              ...m,
-              content: currentContent,
-              isStreaming: stillStreaming,
+            updateThread(tid, (t) => ({
+              ...t,
+              messages: t.messages.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: responseText.substring(0, charIndex),
+                      isStreaming: !done,
+                    }
+                  : m
+              ),
             }));
-          }, 20);
-        }, 1200);
-      }, 600);
+          }, 25);
+          streamTimers.current.push(interval);
+        }, 1000);
+      }, 500);
     },
-    [activeThreadId, activeProjectId, selectedModel]
+    [activeThreadId, activeProjectId, selectedModel, updateThread]
   );
 
   const threadTitle = activeThread?.title || "新しいスレッド";
@@ -203,15 +227,12 @@ export function processRequest(input: string): Result {
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-[#e8e8e8] p-1">
       <div className="w-full h-full max-w-[1800px] rounded-xl border border-[#c8c8c8] shadow-xl overflow-hidden flex flex-col bg-[var(--color-bg-primary)]">
-        {/* Title bar */}
         <TitleBar
           threadTitle={threadTitle}
-          agentStatus="Idle"
+          agentStatus={agentStatus}
         />
 
-        {/* Main content */}
         <div className="flex-1 flex min-h-0">
-          {/* Sidebar */}
           <Sidebar
             projects={projects}
             activeThreadId={activeThreadId}
@@ -220,7 +241,6 @@ export function processRequest(input: string): Result {
             onSettings={() => {}}
           />
 
-          {/* Chat area */}
           <ChatPanel
             messages={messages}
             selectedModel={selectedModel}
@@ -237,7 +257,6 @@ export function processRequest(input: string): Result {
           />
         </div>
 
-        {/* Status bar */}
         <StatusBar
           environment="ローカル環境"
           permissions="デフォルト権限"
