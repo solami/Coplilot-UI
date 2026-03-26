@@ -20,18 +20,18 @@ export function CodeBlock({ code, language = "typescript" }: CodeBlockProps) {
   };
 
   return (
-    <div className="rounded-lg border border-[#30363d] overflow-hidden my-3">
+    <div className="rounded-lg border border-[var(--color-border-default)] overflow-hidden my-3">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-[#161b22] border-b border-[#30363d]">
-        <span className="text-xs text-[#8b949e] font-mono">{language}</span>
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[#2d2d2d] border-b border-[#404040]">
+        <span className="text-xs text-[#999] font-mono">{language}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] transition-colors"
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-[#999] hover:text-white transition-colors"
         >
           {copied ? (
             <>
-              <Check size={12} className="text-[#3fb950]" />
-              <span className="text-[#3fb950]">Copied</span>
+              <Check size={12} className="text-green-400" />
+              <span className="text-green-400">Copied</span>
             </>
           ) : (
             <>
@@ -42,7 +42,6 @@ export function CodeBlock({ code, language = "typescript" }: CodeBlockProps) {
         </button>
       </div>
 
-      {/* Code */}
       <SyntaxHighlighter
         language={language}
         style={atomOneDark}
@@ -50,12 +49,12 @@ export function CodeBlock({ code, language = "typescript" }: CodeBlockProps) {
         customStyle={{
           margin: 0,
           padding: "1rem",
-          background: "#0d1117",
+          background: "#1e1e1e",
           fontSize: "13px",
-          lineHeight: "1.5",
+          lineHeight: "1.6",
         }}
         lineNumberStyle={{
-          color: "#6e7681",
+          color: "#555",
           fontSize: "12px",
           paddingRight: "1rem",
           minWidth: "2.5em",

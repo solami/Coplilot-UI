@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   FileText,
@@ -29,37 +28,37 @@ export function ToolCallBlock({ toolCall }: ToolCallBlockProps) {
   const Icon = toolIcons[toolCall.name] || Terminal;
 
   return (
-    <div className="my-1.5">
+    <div className="my-1">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#161b22] border border-[#21262d] hover:border-[#30363d] transition-colors text-left"
+        className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-[var(--color-bg-hover)] transition-colors text-left"
       >
         <ChevronRight
           size={12}
-          className={`text-[#6e7681] transition-transform shrink-0 ${
+          className={`text-[var(--color-text-tertiary)] transition-transform ${
             isExpanded ? "rotate-90" : ""
           }`}
         />
-        <Icon size={14} className="text-[#8b949e] shrink-0" />
-        <span className="text-xs text-[#8b949e] font-medium">
+        <Icon size={14} className="text-[var(--color-text-secondary)]" />
+        <span className="text-sm text-[var(--color-text-secondary)] font-medium">
           {toolCall.name.replace(/_/g, " ")}
         </span>
-        <span className="text-xs text-[#6e7681] font-mono truncate">
+        <span className="text-sm text-[var(--color-text-tertiary)] font-mono truncate">
           {toolCall.input}
         </span>
-        <span className="ml-auto shrink-0">
+        <span className="ml-1">
           {toolCall.status === "running" && (
-            <Loader2 size={12} className="text-[#58a6ff] animate-spin" />
+            <Loader2 size={12} className="text-[var(--color-accent-blue)] animate-spin" />
           )}
           {toolCall.status === "completed" && (
-            <CheckCircle2 size={12} className="text-[#3fb950]" />
+            <CheckCircle2 size={12} className="text-[var(--color-accent-green)]" />
           )}
           {toolCall.status === "error" && (
-            <XCircle size={12} className="text-[#f85149]" />
+            <XCircle size={12} className="text-[var(--color-accent-red)]" />
           )}
         </span>
         {toolCall.duration && (
-          <span className="text-[10px] text-[#6e7681] shrink-0">
+          <span className="text-xs text-[var(--color-text-tertiary)]">
             {toolCall.duration < 1000
               ? `${toolCall.duration}ms`
               : `${(toolCall.duration / 1000).toFixed(1)}s`}
@@ -67,23 +66,13 @@ export function ToolCallBlock({ toolCall }: ToolCallBlockProps) {
         )}
       </button>
 
-      <AnimatePresence>
-        {isExpanded && toolCall.output && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="overflow-hidden"
-          >
-            <div className="mx-3 px-3 py-2 bg-[#0d1117] border-x border-b border-[#21262d] rounded-b-md">
-              <pre className="text-xs text-[#8b949e] font-mono whitespace-pre-wrap">
-                {toolCall.output}
-              </pre>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isExpanded && toolCall.output && (
+        <div className="ml-7 px-3 py-2 mt-1 bg-[var(--color-bg-secondary)] rounded-md">
+          <pre className="text-xs text-[var(--color-text-secondary)] font-mono whitespace-pre-wrap">
+            {toolCall.output}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
